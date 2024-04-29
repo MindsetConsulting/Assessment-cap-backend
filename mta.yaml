@@ -1,0 +1,177 @@
+_schema-version: "3.1"
+ID: quizapp
+description: A simple CAP project.
+version: 1.0.0
+modules:
+  - name: quizapp-srv
+    type: nodejs
+    path: gen/srv
+    requires:
+      - name: quizapp-auth
+      - name: quizapp-db
+    provides:
+      - name: srv-api
+        properties:
+          srv-url: ${default-url}
+    parameters:
+      buildpack: nodejs_buildpack
+      readiness-health-check-http-endpoint: /health
+      readiness-health-check-type: http
+    build-parameters:
+      builder: npm
+  - name: quizapp-db-deployer
+    type: hdb
+    path: gen/db
+    requires:
+      - name: quizapp-db
+    parameters:
+      buildpack: nodejs_buildpack
+  - name: quizapp-app-content
+    type: com.sap.application.content
+    path: .
+    requires:
+      - name: quizapp-repo-host
+        parameters:
+          content-target: true
+    build-parameters:
+      build-result: resources
+      requires:
+        - artifacts:
+            - commindsetassessmentappui5.zip
+          name: commindsetassessmentappui5
+          target-path: resources/
+        - artifacts:
+            - commindsetassessmentapplistreport.zip
+          name: commindsetassessmentapplistreport
+          target-path: resources/
+  - name: commindsetassessmentappui5
+    type: html5
+    path: app/assessment_app_ui5
+    build-parameters:
+      build-result: dist
+      builder: custom
+      commands:
+        - npm install
+        - npm run build:cf
+      supported-platforms:
+        []
+  - name: quizapp-destination-content
+    type: com.sap.application.content
+    requires:
+      - name: quizapp-destination-service
+        parameters:
+          content-target: true
+      - name: quizapp-repo-host
+        parameters:
+          service-key:
+            name: quizapp-repo-host-key
+      - name: quizapp-auth
+        parameters:
+          service-key:
+            name: quizapp-auth-key
+    parameters:
+      content:
+        instance:
+          destinations:
+            - Name: assessment_router_quizapp_repo_host
+              ServiceInstanceName: quizapp-html5-srv
+              ServiceKeyName: quizapp-repo-host-key
+              sap.cloud.service: assessment_router
+            - Authentication: OAuth2UserTokenExchange
+              Name: assessment_router_quizapp_auth
+              ServiceInstanceName: quizapp-auth
+              ServiceKeyName: quizapp-auth-key
+              sap.cloud.service: assessment_router
+          existing_destinations_policy: ignore
+    build-parameters:
+      no-source: true
+  - name: quizapp
+    type: approuter.nodejs
+    path: app/router
+    requires:
+      - name: srv-api
+        group: destinations
+        properties:
+          forwardAuthToken: true
+          name: srv-api
+          url: ~{srv-url}
+      - name: quizapp-auth
+      - name: quizapp-destination-service
+        group: destinations
+        properties:
+          forwardAuthToken: false
+          name: ui5
+          url: https://ui5.sap.com
+    parameters:
+      disk-quota: 256M
+      keep-existing-routes: true
+      memory: 256M
+  - name: commindsetassessmentapplistreport
+    type: html5
+    path: app/assessment_app_listreport
+    build-parameters:
+      build-result: dist
+      builder: custom
+      commands:
+        - npm install
+        - npm run build:cf
+      supported-platforms:
+        []
+resources:
+  - name: quizapp-auth
+    type: org.cloudfoundry.managed-service
+    parameters:
+      config:
+        tenant-mode: dedicated
+        xsappname: quizapp
+        oauth2-configuration: 
+          credential-types: 
+            - binding-secret
+            - x509
+          system-attributes: []
+          grant-types:
+            - password
+            - authorization_code
+            - refresh_token
+            - user_token
+      path: ./xs-security.json
+      service: xsuaa
+      service-plan: application
+  - name: quizapp-db
+    type: com.sap.xs.hdi-container
+    parameters:
+      service: hana
+      service-plan: hdi-shared
+  - name: quizapp-repo-host
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: html5-apps-repo
+      service-name: quizapp-html5-srv
+      service-plan: app-host
+  - name: quizapp-destination-service
+    type: org.cloudfoundry.managed-service
+    parameters:
+      config:
+        HTML5Runtime_enabled: true
+        init_data:
+          instance:
+            destinations:
+              - Authentication: NoAuthentication
+                Name: ui5
+                ProxyType: Internet
+                Type: HTTP
+                URL: https://ui5.sap.com
+            existing_destinations_policy: update
+        version: 1.0.0
+      service: destination
+      service-name: quizapp-destination-service
+      service-plan: lite
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npm ci
+        - npx cds build --production

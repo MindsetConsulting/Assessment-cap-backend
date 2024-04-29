@@ -1,0 +1,40 @@
+{
+    "name": "quizapp",
+    "version": "1.0.0",
+    "description": "A simple CAP project.",
+    "repository": "<Add your repository here>",
+    "license": "UNLICENSED",
+    "private": true,
+    "dependencies": {
+        "@sap/cds": "^7",
+        "@sap/cds-hana": "^2",
+        "@sap/xssec": "^3",
+        "express": "^4"
+    },
+    "devDependencies": {
+        "@cap-js/sqlite": "^1",
+        "@sap/cds-dk": "^7",
+        "@sap/ux-specification": "^1.120.8",
+        "rimraf": "^3.0.2"
+    },
+    "scripts": {
+        "start": "cds-serve",
+        "watch-assessment_app_ui5": "cds watch --open assessment_app_ui5/webapp/index.html?sap-ui-xx-viewCache=false",
+        "undeploy": "cf undeploy quizapp --delete-services --delete-service-keys --delete-service-brokers",
+        "build": "rimraf resources mta_archives && mbt build --mtar archive",
+        "deploy": "cf deploy mta_archives/archive.mtar --retries 1",
+        "watch-assessment_app_listreport": "cds watch --open assessment_app_listreport/webapp/index.html?sap-ui-xx-viewCache=false"
+    },
+    "cds": {
+        "requires": {
+            "auth": "mocked",
+            "db": "hana",
+            "[production]": {
+              "db": "hana"
+            }
+        }
+    },
+    "sapux": [
+        "app/assessment_app_listreport"
+    ]
+}

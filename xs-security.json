@@ -1,0 +1,41 @@
+{
+  "xsappname": "quizapp",
+  "scopes": [
+    {
+      "name": "$XSAPPNAME.com.mindset.role.admin",
+      "description": "com.mindset.role.admin"
+    },
+    {
+      "name": "$XSAPPNAME.com.mindset.role.user",
+      "description": "com.mindset.role.user"
+    }
+  ],
+  "attributes": [],
+  "role-templates": [
+    {
+      "name": "com.mindset.role.admin",
+      "description": "generated",
+      "scope-references": [
+        "$XSAPPNAME.com.mindset.role.admin"
+      ],
+      "attribute-references": []
+    },
+    {
+      "name": "com.mindset.role.user",
+      "description": "generated",
+      "scope-references": [
+        "$XSAPPNAME.com.mindset.role.user"
+      ],
+      "attribute-references": []
+    }
+  ],
+  "oauth2-configuration": {
+    "credential-types": [
+      "binding-secret",
+      "x509"
+    ],
+    "redirect-uris": [
+      "https://*.applicationstudio.cloud.sap/**"
+    ]
+  }
+}
